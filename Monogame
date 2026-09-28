@@ -1,0 +1,193 @@
+using System;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+
+namespace Videojuego
+{
+    public enum EstadoJuego
+    {
+        Menu,
+        Jugando,
+        Historial
+    }
+
+    public class Game1 : Game
+    {
+       
+       
+        private GraphicsDeviceManager _graphics;
+        private SpriteBatch _spriteBatch;
+
+        private Texture2D _pixeles;
+
+        private SpriteFont _fuente;
+        private int _diaActual = 1;
+        private float _tiempoDia = 0f;
+
+        // Botones del Menú Principal
+        private Rectangle _btnIniciar;
+        private Rectangle _btnHistorial;
+        private Rectangle _btnSalir;
+
+        // Botón general para regresar
+        private Rectangle _btnVolverMenu;
+
+        // Propiedades del Jugador
+        private Vector2 _posicionJugador;
+        private float _velocidadJugador = 100f; // Pixeles por segundo
+        private int _tamanoJugador = 50;
+
+        private EstadoJuego _estadoActual = EstadoJuego.Menu;
+        private MouseState _mouseAnterior;
+
+      
+
+        public Game1()
+        {
+            _graphics = new GraphicsDeviceManager(this);
+            Content.RootDirectory = "Content";
+            IsMouseVisible = true;
+
+            _graphics.PreferredBackBufferWidth = 1920;
+            _graphics.PreferredBackBufferHeight = 1080;
+        }
+
+        protected override void Initialize()
+        {
+
+
+            // Posiciones del Menú Principal
+            _btnIniciar = new Rectangle(810, 250, 300, 80);   // Iniciar (Verde)
+            _btnHistorial = new Rectangle(810, 400, 300, 80); // Historial (Azul)
+            _btnSalir = new Rectangle(810, 550, 300, 80);     // Salir (Rojo)
+
+            // Botón Volver
+            _btnVolverMenu = new Rectangle(20, 20, 120, 40);  // Volver (Gris)
+
+            // Posición inicial del jugador en el centro de la pantalla
+            _posicionJugador = new Vector2(400 - (_tamanoJugador / 2), 300 - (_tamanoJugador / 2));
+
+            base.Initialize();
+        }
+
+        protected override void LoadContent()
+        {
+            _spriteBatch = new SpriteBatch(GraphicsDevice);
+
+            _fuente = Content.Load<SpriteFont>("File");
+
+            _pixeles = new Texture2D(GraphicsDevice, 1, 1);
+            _pixeles.SetData(new[] { Color.White });
+        }
+        protected override void Update(GameTime gameTime)
+        {
+            MouseState mouse = Mouse.GetState();
+            KeyboardState teclado = Keyboard.GetState();
+
+            if (teclado.IsKeyDown(Keys.Escape))
+                Exit();
+
+            // Movimiento con WASD cuando se está jugando
+            if (_estadoActual == EstadoJuego.Jugando)
+            {
+                // Esto hace que los dias avancen solos
+                float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+                _tiempoDia += deltaTime;
+               
+                // Esto hace que vaya pasando el dia luego de 10 segundos (por Ahora)
+                if (_tiempoDia >= 10f)
+                {
+                    _diaActual++;
+                    _tiempoDia = 0f;
+                }
+
+                if (teclado.IsKeyDown(Keys.W)) _posicionJugador.Y -= _velocidadJugador * deltaTime;
+                if (teclado.IsKeyDown(Keys.S)) _posicionJugador.Y += _velocidadJugador * deltaTime;
+                if (teclado.IsKeyDown(Keys.A)) _posicionJugador.X -= _velocidadJugador * deltaTime;
+                if (teclado.IsKeyDown(Keys.D)) _posicionJugador.X += _velocidadJugador * deltaTime;
+
+                // Límites de pantalla para no salirse
+                _posicionJugador.X = MathHelper.Clamp(_posicionJugador.X, 0, _graphics.PreferredBackBufferWidth - _tamanoJugador);
+                _posicionJugador.Y = MathHelper.Clamp(_posicionJugador.Y, 0, _graphics.PreferredBackBufferHeight - _tamanoJugador);
+            }
+
+            // Detección de clics en el menú
+            if (mouse.LeftButton == ButtonState.Released && _mouseAnterior.LeftButton == ButtonState.Pressed)
+            {
+                Point pos = new Point(mouse.X, mouse.Y);
+
+                if (_estadoActual == EstadoJuego.Menu)
+                {
+                    if (_btnIniciar.Contains(pos))
+                    {
+                        _estadoActual = EstadoJuego.Jugando;
+                    }
+                    else if (_btnHistorial.Contains(pos))
+                    {
+                        _estadoActual = EstadoJuego.Historial;
+                    }
+                    else if (_btnSalir.Contains(pos))
+                    {
+                        Exit();
+                    }
+                }
+                else if (_estadoActual == EstadoJuego.Jugando || _estadoActual == EstadoJuego.Historial)
+                {
+                    if (_btnVolverMenu.Contains(pos))
+                    {
+                        _estadoActual = EstadoJuego.Menu;
+                    }
+                }
+            }
+
+            _mouseAnterior = mouse;
+            base.Update(gameTime);
+        }
+
+        protected override void Draw(GameTime gameTime)
+        {
+            _spriteBatch.Begin();
+
+            if (_estadoActual == EstadoJuego.Menu)
+            {
+                GraphicsDevice.Clear(Color.CornflowerBlue);
+
+                // Botones del Menú Principal
+                _spriteBatch.Draw(_pixeles, _btnIniciar, Color.Green);      // Botón de Iniciar
+                _spriteBatch.Draw(_pixeles, _btnHistorial, Color.DodgerBlue); // Botón de Historial
+                _spriteBatch.Draw(_pixeles, _btnSalir, Color.Red);          // Botón de Salir
+
+                // Identificadores visuales centrales (rectángulos blancos estilo indicador)
+                _spriteBatch.Draw(_pixeles, new Rectangle(_btnIniciar.X + 80, _btnIniciar.Y + 20, 40, 20), Color.Black);
+                _spriteBatch.Draw(_pixeles, new Rectangle(_btnHistorial.X + 80, _btnHistorial.Y + 20, 40, 20), Color.White);
+                _spriteBatch.Draw(_pixeles, new Rectangle(_btnSalir.X + 80, _btnSalir.Y + 20, 40, 20), Color.White);
+            }
+            else if (_estadoActual == EstadoJuego.Jugando)
+            {
+                GraphicsDevice.Clear(Color.DarkSlateGray);
+
+                // Personaje del Jugador (Cuadrado Amarillo movible con WASD)
+                Rectangle rectJugador = new Rectangle((int)_posicionJugador.X, (int)_posicionJugador.Y, _tamanoJugador, _tamanoJugador);
+                _spriteBatch.Draw(_pixeles, rectJugador, Color.Yellow);
+
+                _spriteBatch.DrawString(_fuente,"Dia " + _diaActual,new Vector2(1700, 20),Color.White);
+
+                // Botón Volver al Menú
+                _spriteBatch.Draw(_pixeles, _btnVolverMenu, Color.Gray);
+            }
+            else if (_estadoActual == EstadoJuego.Historial)
+            {
+                GraphicsDevice.Clear(Color.DarkBlue);
+
+                // Botón Volver al Menú
+                _spriteBatch.Draw(_pixeles, _btnVolverMenu, Color.Gray);
+            }
+
+            _spriteBatch.End();
+
+            base.Draw(gameTime);
+        }
+    }
+}
+
